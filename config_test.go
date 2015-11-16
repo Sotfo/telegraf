@@ -8,7 +8,7 @@ import (
 
 	"github.com/influxdb/telegraf/plugins"
 	"github.com/influxdb/telegraf/plugins/exec"
-	"github.com/influxdb/telegraf/plugins/kafka_consumer"
+	"github.com/influxdb/telegraf/plugins/memcached"
 	"github.com/influxdb/telegraf/plugins/procstat"
 	"github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
@@ -39,7 +39,8 @@ type MergeStructSuite struct {
 }
 
 func (s *MergeStructSuite) SetupSuite() {
-	s.AllFields = []string{"string_field", "integer_field", "float_field", "boolean_field", "date_time_field", "array_field", "table_array_field"}
+	s.AllFields = []string{"string_field", "integer_field", "float_field",
+		"boolean_field", "date_time_field", "array_field", "table_array_field"}
 }
 
 func (s *MergeStructSuite) SetupTest() {
@@ -90,7 +91,8 @@ func (s *MergeStructSuite) TestEmptyMerge() {
 	if err != nil {
 		s.T().Error(err)
 	}
-	s.Equal(s.FullStruct, s.EmptyStruct, fmt.Sprintf("Full merge of %v onto an empty struct failed.", s.FullStruct))
+	s.Equal(s.FullStruct, s.EmptyStruct,
+		fmt.Sprintf("Full merge of %v onto an empty struct failed.", s.FullStruct))
 }
 
 func (s *MergeStructSuite) TestFullMerge() {
@@ -125,7 +127,8 @@ func (s *MergeStructSuite) TestFullMerge() {
 	if err != nil {
 		s.T().Error(err)
 	}
-	s.Equal(result, s.FullStruct, fmt.Sprintf("Full merge of %v onto FullStruct failed.", s.AnotherFullStruct))
+	s.Equal(result, s.FullStruct,
+		fmt.Sprintf("Full merge of %v onto FullStruct failed.", s.AnotherFullStruct))
 }
 
 func (s *MergeStructSuite) TestPartialMergeWithoutSlices() {
@@ -148,11 +151,14 @@ func (s *MergeStructSuite) TestPartialMergeWithoutSlices() {
 		},
 	}
 
-	err := mergeStruct(s.FullStruct, s.AnotherFullStruct, []string{"string_field", "float_field", "date_time_field"})
+	err := mergeStruct(s.FullStruct, s.AnotherFullStruct,
+		[]string{"string_field", "float_field", "date_time_field"})
 	if err != nil {
 		s.T().Error(err)
 	}
-	s.Equal(result, s.FullStruct, fmt.Sprintf("Partial merge without slices of %v onto FullStruct failed.", s.AnotherFullStruct))
+	s.Equal(result, s.FullStruct,
+		fmt.Sprintf("Partial merge without slices of %v onto FullStruct failed.",
+			s.AnotherFullStruct))
 }
 
 func (s *MergeStructSuite) TestPartialMergeWithSlices() {
@@ -183,11 +189,14 @@ func (s *MergeStructSuite) TestPartialMergeWithSlices() {
 		},
 	}
 
-	err := mergeStruct(s.FullStruct, s.AnotherFullStruct, []string{"string_field", "float_field", "date_time_field", "table_array_field"})
+	err := mergeStruct(s.FullStruct, s.AnotherFullStruct,
+		[]string{"string_field", "float_field", "date_time_field", "table_array_field"})
 	if err != nil {
 		s.T().Error(err)
 	}
-	s.Equal(result, s.FullStruct, fmt.Sprintf("Partial merge with slices of %v onto FullStruct failed.", s.AnotherFullStruct))
+	s.Equal(result, s.FullStruct,
+		fmt.Sprintf("Partial merge with slices of %v onto FullStruct failed.",
+			s.AnotherFullStruct))
 }
 
 func TestConfig_mergeStruct(t *testing.T) {
@@ -212,17 +221,14 @@ func TestConfig_parsePlugin(t *testing.T) {
 		pluginConfigurationFieldsSet: make(map[string][]string),
 	}
 
-	subtbl := tbl.Fields["kafka"].(*ast.Table)
-	err = c.parsePlugin("kafka", subtbl)
+	subtbl := tbl.Fields["memcached"].(*ast.Table)
+	err = c.parsePlugin("memcached", subtbl)
 
-	kafka := plugins.Plugins["kafka"]().(*kafka_consumer.Kafka)
-	kafka.ConsumerGroupName = "telegraf_metrics_consumers"
-	kafka.Topic = "topic_with_metrics"
-	kafka.ZookeeperPeers = []string{"test.example.com:2181"}
-	kafka.BatchSize = 1000
+	memcached := plugins.Plugins["memcached"]().(*memcached.Memcached)
+	memcached.Servers = []string{"localhost"}
 
-	kConfig := &ConfiguredPlugin{
-		Name: "kafka",
+	mConfig := &ConfiguredPlugin{
+		Name: "memcached",
 		Drop: []string{"other", "stuff"},
 		Pass: []string{"some", "strings"},
 		TagDrop: []TagFilter{
@@ -240,8 +246,10 @@ func TestConfig_parsePlugin(t *testing.T) {
 		Interval: 5 * time.Second,
 	}
 
-	assert.Equal(t, kafka, c.plugins["kafka"], "Testdata did not produce a correct kafka struct.")
-	assert.Equal(t, kConfig, c.pluginConfigurations["kafka"], "Testdata did not produce correct kafka metadata.")
+	assert.Equal(t, memcached, c.plugins["memcached"],
+		"Testdata did not produce a correct memcached struct.")
+	assert.Equal(t, mConfig, c.pluginConfigurations["memcached"],
+		"Testdata did not produce correct memcached metadata.")
 }
 
 func TestConfig_LoadDirectory(t *testing.T) {
@@ -254,14 +262,11 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		t.Error(err)
 	}
 
-	kafka := plugins.Plugins["kafka"]().(*kafka_consumer.Kafka)
-	kafka.ConsumerGroupName = "telegraf_metrics_consumers"
-	kafka.Topic = "topic_with_metrics"
-	kafka.ZookeeperPeers = []string{"localhost:2181", "test.example.com:2181"}
-	kafka.BatchSize = 10000
+	memcached := plugins.Plugins["memcached"]().(*memcached.Memcached)
+	memcached.Servers = []string{"localhost", "192.168.1.1"}
 
-	kConfig := &ConfiguredPlugin{
-		Name: "kafka",
+	mConfig := &ConfiguredPlugin{
+		Name: "memcached",
 		Drop: []string{"other", "stuff"},
 		Pass: []string{"some", "strings"},
 		TagDrop: []TagFilter{
@@ -305,12 +310,18 @@ func TestConfig_LoadDirectory(t *testing.T) {
 
 	pConfig := &ConfiguredPlugin{Name: "procstat"}
 
-	assert.Equal(t, kafka, c.plugins["kafka"], "Merged Testdata did not produce a correct kafka struct.")
-	assert.Equal(t, kConfig, c.pluginConfigurations["kafka"], "Merged Testdata did not produce correct kafka metadata.")
+	assert.Equal(t, memcached, c.plugins["memcached"],
+		"Merged Testdata did not produce a correct memcached struct.")
+	assert.Equal(t, mConfig, c.pluginConfigurations["memcached"],
+		"Merged Testdata did not produce correct memcached metadata.")
 
-	assert.Equal(t, ex, c.plugins["exec"], "Merged Testdata did not produce a correct exec struct.")
-	assert.Equal(t, eConfig, c.pluginConfigurations["exec"], "Merged Testdata did not produce correct exec metadata.")
+	assert.Equal(t, ex, c.plugins["exec"],
+		"Merged Testdata did not produce a correct exec struct.")
+	assert.Equal(t, eConfig, c.pluginConfigurations["exec"],
+		"Merged Testdata did not produce correct exec metadata.")
 
-	assert.Equal(t, pstat, c.plugins["procstat"], "Merged Testdata did not produce a correct procstat struct.")
-	assert.Equal(t, pConfig, c.pluginConfigurations["procstat"], "Merged Testdata did not produce correct procstat metadata.")
+	assert.Equal(t, pstat, c.plugins["procstat"],
+		"Merged Testdata did not produce a correct procstat struct.")
+	assert.Equal(t, pConfig, c.pluginConfigurations["procstat"],
+		"Merged Testdata did not produce correct procstat metadata.")
 }
